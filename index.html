@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>☕ CafeWing Roulette</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #1A1208;
+      --surface:   #2C1F0E;
+      --surface2:  #3D2D18;
+      --border:    #5C4A30;
+      --gold:      #C9963A;
+      --gold-lt:   #E8C06A;
+      --cream:     #F5ECD7;
+      --cream-dim: #C4B49A;
+      --green:     #4CAF7D;
+      --green-bg:  #0D2B1A;
+      --red:       #E05252;
+      --red-bg:    #2B0D0D;
+      --purple:    #A07CC5;
+      --purple-bg: #1E1030;
+      --shadow:    0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: var(--bg);
+      color: var(--cream);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── Header ── */
+    .app-header {
+      width: 100%;
+      background: linear-gradient(135deg, var(--surface) 0%, #1A1208 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .app-header .logo-text {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      color: var(--gold-lt);
+      letter-spacing: 0.03em;
+    }
+    .app-header .user-chip {
+      margin-left: auto;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 12px;
+      font-size: 0.8rem;
+      color: var(--cream-dim);
+    }
+
+    /* ── Container ── */
+    .container {
+      width: 100%;
+      max-width: 560px;
+      padding: 20px 16px 40px;
+    }
+
+    /* ── View ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+    }
+
+    /* ── Button ── */
+    .btn {
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.18s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold) 0%, #A07830 100%);
+      color: #1A1208;
+    }
+    .btn-gold:hover:not(:disabled) {
+      background: linear-gradient(135deg, var(--gold-lt) 0%, var(--gold) 100%);
+      transform: translateY(-1px);
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--cream-dim);
+    }
+    .btn-outline:hover:not(:disabled) {
+      border-color: var(--gold);
+      color: var(--gold-lt);
+    }
+    .btn-green {
+      background: linear-gradient(135deg, #2E7D52 0%, var(--green) 100%);
+      color: white;
+    }
+    .btn-green:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn-red {
+      background: var(--red-bg);
+      border: 1px solid var(--red);
+      color: var(--red);
+      font-size: 0.75rem;
+      padding: 4px 10px;
+    }
+    .btn-full { width: 100%; justify-content: center; }
+
+    /* ── Input ── */
+    .input {
+      width: 100%;
+      padding: 11px 16px;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      color: var(--cream);
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.92rem;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+    .input:focus { border-color: var(--gold); }
+    .input::placeholder { color: var(--cream-dim); opacity: 0.5; }
+
+    /* ── Nickname Setup ── */
+    .nickname-setup {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+      text-align: center;
+      padding: 20px;
+      gap: 0;
+    }
+    .nickname-setup .big-icon {
+      font-size: 5rem;
+      margin-bottom: 20px;
+      filter: drop-shadow(0 4px 16px rgba(201,150,58,0.4));
+    }
+    .nickname-setup h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      color: var(--gold-lt);
+      margin-bottom: 8px;
+    }
+    .nickname-setup p {
+      color: var(--cream-dim);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin-bottom: 28px;
+    }
+    .nickname-setup .input {
+      max-width: 280px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    /* ── Room List ── */
+    .rooms-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 16px;
+    }
+    .rooms-header h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      color: var(--gold-lt);
+    }
+    .rooms-header p { font-size: 0.8rem; color: var(--cream-dim); margin-top: 2px; }
+
+    .room-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .room-card:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(201,150,58,0.15);
+    }
+    .room-card .room-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--cream);
+    }
+    .room-card .room-meta {
+      font-size: 0.78rem;
+      color: var(--cream-dim);
+      margin-top: 4px;
+    }
+    .room-timer {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--gold);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+    .room-timer.urgent { color: var(--red); border-color: var(--red); }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 50px 20px;
+      color: var(--cream-dim);
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.5; }
+    .empty p { font-size: 0.88rem; line-height: 1.6; }
+
+    /* ── Room Header card ── */
+    .room-head-card {
+      background: linear-gradient(135deg, var(--surface) 0%, #1A1208 100%);
+      border: 1px solid var(--gold);
+      border-radius: 16px;
+      padding: 18px 20px;
+      margin-bottom: 14px;
+    }
+    .room-head-card .title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      color: var(--gold-lt);
+    }
+    .room-head-card .meta {
+      font-size: 0.78rem;
+      color: var(--cream-dim);
+      margin-top: 4px;
+    }
+    .room-head-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+    #room-timer-display {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--gold);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+    #room-timer-display.urgent { color: var(--red); border-color: var(--red); }
+
+    /* ── Member list ── */
+    .member-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--surface2);
+    }
+    .member-row:last-child { border-bottom: none; }
+    .member-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold) 0%, #7A5A20 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #1A1208;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    .member-name { font-weight: 700; font-size: 0.9rem; }
+    .member-status { font-size: 0.77rem; color: var(--cream-dim); margin-top: 2px; }
+    .member-status.confirmed { color: var(--green); }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 20px;
+      font-size: 0.68rem;
+      font-weight: 700;
+    }
+    .badge-host { background: rgba(201,150,58,0.2); color: var(--gold); border: 1px solid rgba(201,150,58,0.3); }
+    .badge-you  { background: rgba(100,160,255,0.15); color: #7EB3FF; border: 1px solid rgba(100,160,255,0.25); }
+    .badge-excl { background: var(--purple-bg); color: var(--purple); border: 1px solid rgba(160,124,197,0.3); }
+
+    /* ── Menu grid ── */
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .menu-item {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+    .menu-item:hover { border-color: var(--gold); }
+    .menu-item.selected {
+      border-color: var(--gold);
+      background: rgba(201,150,58,0.12);
+    }
+    .menu-item .m-name { font-weight: 700; font-size: 0.85rem; color: var(--cream); }
+    .menu-item .m-price { font-size: 0.75rem; color: var(--gold); margin-top: 3px; }
+    .menu-item.disabled-menu { pointer-events: none; opacity: 0.4; }
+    .menu-item.selected.disabled-menu { opacity: 1; }
+
+    /* ── Order total row ── */
+    .order-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--surface2);
+      color: var(--cream-dim);
+    }
+    .order-row:last-child { border-bottom: none; }
+    .order-row.confirmed-row { color: var(--cream); }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      font-weight: 700;
+    }
+    .total-row .total-amount { font-size: 1.1rem; color: var(--gold-lt); }
+
+    /* ── Draw hint ── */
+    .draw-hint {
+      text-align: center;
+      font-size: 0.78rem;
+      color: var(--cream-dim);
+      margin-top: 8px;
+      min-height: 18px;
+    }
+
+    /* ── Winner ── */
+    .winner-card {
+      text-align: center;
+      padding: 28px 20px;
+    }
+    .winner-emoji-big {
+      font-size: 4.5rem;
+      margin-bottom: 12px;
+      animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.5); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+    .winner-name-big {
+      font-family: 'Playfair Display', serif;
+      font-size: 2rem;
+      color: var(--gold-lt);
+      margin-bottom: 6px;
+    }
+    .winner-sub { font-size: 0.88rem; color: var(--cream-dim); }
+    .excl-notice {
+      margin-top: 16px;
+      font-size: 0.82rem;
+      color: var(--purple);
+      background: var(--purple-bg);
+      border: 1px solid rgba(160,124,197,0.3);
+      padding: 10px 14px;
+      border-radius: 10px;
+      display: none;
+    }
+
+    /* ── My order bar ── */
+    .my-order-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin: 12px 0;
+      font-size: 0.85rem;
+    }
+    .my-order-bar .label { color: var(--cream-dim); }
+    .my-order-bar .value { font-weight: 700; color: var(--gold-lt); }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="app-header">
+  <span style="font-size:1.4rem;">☕</span>
+  <span class="logo-text">CafeWing Roulette</span>
+  <div class="user-chip" id="header-user"></div>
+</div>
+
+<!-- ══════════════════════════════════════
+     VIEW: 닉네임 설정
+════════════════════════════════════════ -->
+<div id="view-nickname" class="view container">
+  <div class="nickname-setup">
+    <div class="big-icon">☕</div>
+    <h2>처음 오셨군요!</h2>
+    <p>사용할 닉네임을 입력해주세요.<br>이 기기에서 계속 사용됩니다.</p>
+    <input type="text" id="nickname-input" class="input" placeholder="닉네임 입력 (최대 10자)" maxlength="10">
+    <br>
+    <button id="nickname-btn" class="btn btn-gold" style="margin-top:8px; min-width:140px;">시작하기 →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     VIEW: 방 목록
+════════════════════════════════════════ -->
+<div id="view-rooms" class="view container">
+  <div class="rooms-header">
+    <div>
+      <h2>열린 방 목록</h2>
+      <p>방을 선택하거나 새로 만드세요</p>
+    </div>
+    <button id="create-room-btn" class="btn btn-gold">+ 방 만들기</button>
+  </div>
+  <div id="room-list">
+    <div class="empty"><div class="empty-icon">🔄</div><p>불러오는 중...</p></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     VIEW: 방 안
+════════════════════════════════════════ -->
+<div id="view-room" class="view container">
+
+  <!-- 방 헤더 -->
+  <div class="room-head-card">
+    <div class="room-head-top">
+      <div>
+        <div class="title" id="room-title"></div>
+        <div class="meta" id="room-meta"></div>
+      </div>
+      <span id="room-timer-display">⏱ --:--</span>
+    </div>
+    <button id="leave-room-btn" class="btn btn-outline" style="font-size:0.8rem; padding:6px 14px;">← 나가기</button>
+  </div>
+
+  <!-- 참가자 -->
+  <div class="card">
+    <div class="section-label">참가자</div>
+    <div id="member-list"></div>
+  </div>
+
+  <!-- 메뉴 선택 -->
+  <div class="card" id="menu-section">
+    <div class="section-label">메뉴 선택</div>
+    <div class="menu-grid" id="menu-grid"></div>
+    <div class="my-order-bar">
+      <span class="label">내 선택</span>
+      <span class="value" id="my-order-text">선택 안 함</span>
+    </div>
+    <button id="confirm-btn" class="btn btn-green btn-full" disabled>✓ 주문 확정</button>
+  </div>
+
+  <!-- 전체 주문 & 뽑기 -->
+  <div class="card">
+    <div class="section-label">전체 주문</div>
+    <div id="all-orders"></div>
+    <div class="total-row">
+      <span style="font-size:0.85rem; color:var(--cream-dim);">합계</span>
+      <span class="total-amount" id="total-amount">0원</span>
+    </div>
+    <div style="margin-top:16px;">
+      <button id="draw-btn" class="btn btn-gold btn-full" style="font-size:1rem; padding:14px;" disabled>🎲 뽑기 시작!</button>
+      <div class="draw-hint" id="draw-hint"></div>
+    </div>
+  </div>
+
+  <!-- 당첨자 -->
+  <div class="card" id="winner-section" style="display:none;">
+    <div class="winner-card">
+      <div class="winner-emoji-big">🎉</div>
+      <div class="winner-name-big" id="winner-name-big"></div>
+      <div class="winner-sub" id="winner-sub"></div>
+      <div class="excl-notice" id="excl-notice"></div>
+    </div>
+  </div>
+
+</div><!-- end view-room -->
+
+<script type="module">
+  import { initializeApp }    from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+  import { getDatabase, ref, set, get, onValue, remove, update, push, off }
+                               from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+  // ════════════════════════════════════════════
+  // 🔧 Firebase 설정
+  // ════════════════════════════════════════════
+  const firebaseConfig = {
+    apiKey:            "AIzaSyAAUMjXg_pYy1FGxbEhSZK9VxHglIRcB-c",
+    authDomain:        "cafewing-roulette.firebaseapp.com",
+    databaseURL:       "https://cafewing-roulette-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId:         "cafewing-roulette",
+    storageBucket:     "cafewing-roulette.firebasestorage.app",
+    messagingSenderId: "233510817183",
+    appId:             "1:233510817183:web:443fa293e57a83e94e41aa"
+  };
+
+  // ════════════════════════════════════════════
+  // ☕ 카페 메뉴 (여기서 수정하세요!)
+  // ════════════════════════════════════════════
+  const MENU = [
+    { name: '아메리카노',    price: 3000 },
+    { name: '카페라떼',      price: 4000 },
+    { name: '카푸치노',      price: 4500 },
+    { name: '바닐라라떼',    price: 5000 },
+    { name: '카라멜마끼아또', price: 5500 },
+    { name: '콜드브루',      price: 4500 },
+    { name: '에스프레소',    price: 2500 },
+    { name: '녹차라떼',      price: 4500 },
+    { name: '초코라떼',      price: 5000 },
+    { name: '아이스티',      price: 3500 },
+  ];
+
+  const ROOM_TTL = 15 * 60 * 1000; // 15분 (ms)
+
+  // ════════════════════════════════════════════
+  // 초기화
+  // ════════════════════════════════════════════
+  const app = initializeApp(firebaseConfig);
+  const db  = getDatabase(app);
+
+  // 유저 식별 (localStorage)
+  let userId = localStorage.getItem('cw_uid');
+  if (!userId) {
+    userId = 'u_' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+    localStorage.setItem('cw_uid', userId);
+  }
+  let userNickname = localStorage.getItem('cw_nick');
+
+  // 앱 상태
+  let currentRoomId   = null;
+  let currentRoomSnap = null;
+  let unsubRooms      = null;
+  let unsubRoom       = null;
+  let timerInterval   = null;
+
+  // ════════════════════════════════════════════
+  // 화면 전환
+  // ════════════════════════════════════════════
+  function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + name).classList.add('active');
+  }
+
+  function setHeaderUser(nick) {
+    const el = document.getElementById('header-user');
+    el.textContent = nick ? '👤 ' + nick : '';
+  }
+
+  // ════════════════════════════════════════════
+  // 닉네임 설정
+  // ════════════════════════════════════════════
+  if (!userNickname) {
+    showView('nickname');
+  } else {
+    setHeaderUser(userNickname);
+    goToRoomList();
+  }
+
+  document.getElementById('nickname-btn').addEventListener('click', saveNickname);
+  document.getElementById('nickname-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveNickname();
+  });
+
+  function saveNickname() {
+    const val = document.getElementById('nickname-input').value.trim();
+    if (!val) return alert('닉네임을 입력해주세요!');
+    userNickname = val;
+    localStorage.setItem('cw_nick', userNickname);
+    setHeaderUser(userNickname);
+    goToRoomList();
+  }
+
+  // ════════════════════════════════════════════
+  // 방 목록
+  // ════════════════════════════════════════════
+  function goToRoomList() {
+    showView('rooms');
+    if (unsubRooms) unsubRooms();
+    unsubRooms = onValue(ref(db, 'rooms'), snap => {
+      const data = snap.val() || {};
+      // 만료된 방 정리
+      Object.entries(data).forEach(([id, r]) => {
+        if (Date.now() > r.expiresAt) remove(ref(db, 'rooms/' + id));
+      });
+      renderRoomList(data);
+    });
+  }
+
+  function renderRoomList(data) {
+    const container = document.getElementById('room-list');
+    const rooms = Object.entries(data)
+      .filter(([, r]) => Date.now() <= r.expiresAt)
+      .sort((a, b) => b[1].createdAt - a[1].createdAt);
+
+    if (rooms.length === 0) {
+      container.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">🪑</div>
+          <p>열린 방이 없어요<br><span style="opacity:0.6;">방을 만들어서 팀원을 초대해보세요!</span></p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = rooms.map(([roomId, room]) => {
+      const members = room.members ? Object.keys(room.members).length : 0;
+      const rem     = Math.max(0, room.expiresAt - Date.now());
+      const mins    = Math.floor(rem / 60000);
+      const secs    = Math.floor((rem % 60000) / 1000);
+      const urgent  = rem < 3 * 60000;
+      return `
+        <div class="room-card" onclick="window._joinRoom('${roomId}')">
+          <div>
+            <div class="room-name">☕ ${esc(room.hostNickname)}의 카페 타임</div>
+            <div class="room-meta">👥 ${members}명 참가 중</div>
+          </div>
+          <span class="room-timer ${urgent ? 'urgent' : ''}">${mins}:${String(secs).padStart(2,'0')}</span>
+        </div>`;
+    }).join('');
+  }
+
+  document.getElementById('create-room-btn').addEventListener('click', createRoom);
+
+  async function createRoom() {
+    const roomRef = push(ref(db, 'rooms'));
+    const roomId  = roomRef.key;
+    const now     = Date.now();
+    await set(roomRef, {
+      hostId:       userId,
+      hostNickname: userNickname,
+      createdAt:    now,
+      expiresAt:    now + ROOM_TTL,
+      winner:       null,
+      excludedUsers: {}
+    });
+    await set(ref(db, `rooms/${roomId}/members/${userId}`), {
+      nickname:  userNickname,
+      menuName:  null,
+      menuPrice: null,
+      confirmed: false,
+      joinedAt:  now
+    });
+    enterRoom(roomId);
+  }
+
+  window._joinRoom = async function(roomId) {
+    const snap = await get(ref(db, 'rooms/' + roomId));
+    if (!snap.exists()) return alert('방이 이미 사라졌어요!');
+    const room = snap.val();
+    if (Date.now() > room.expiresAt) {
+      await remove(ref(db, 'rooms/' + roomId));
+      return alert('만료된 방이에요!');
+    }
+    // 이미 들어와 있는지 확인
+    const existing = await get(ref(db, `rooms/${roomId}/members/${userId}`));
+    if (!existing.exists()) {
+      await set(ref(db, `rooms/${roomId}/members/${userId}`), {
+        nickname:  userNickname,
+        menuName:  null,
+        menuPrice: null,
+        confirmed: false,
+        joinedAt:  Date.now()
+      });
+    }
+    enterRoom(roomId);
+  };
+
+  // ════════════════════════════════════════════
+  // 방 입장
+  // ════════════════════════════════════════════
+  function enterRoom(roomId) {
+    if (unsubRooms) { unsubRooms(); unsubRooms = null; }
+    currentRoomId = roomId;
+    renderMenuGrid();
+    showView('room');
+
+    if (unsubRoom) unsubRoom();
+    unsubRoom = onValue(ref(db, 'rooms/' + roomId), snap => {
+      if (!snap.exists()) {
+        alert('방이 삭제됐어요.');
+        doLeaveRoom(false);
+        return;
+      }
+      currentRoomSnap = snap.val();
+      renderRoom(currentRoomSnap);
+    });
+  }
+
+  // ════════════════════════════════════════════
+  // 방 렌더링
+  // ════════════════════════════════════════════
+  function renderRoom(room) {
+    const isHost       = room.hostId === userId;
+    const members      = room.members      || {};
+    const excluded     = room.excludedUsers|| {};
+    const memberList   = Object.entries(members).sort((a, b) => a[1].joinedAt - b[1].joinedAt);
+
+    // 헤더
+    document.getElementById('room-title').textContent = `☕ ${room.hostNickname}의 카페 타임`;
+    document.getElementById('room-meta').textContent  = `방장: ${room.hostNickname}`;
+
+    // 타이머
+    updateTimer(room.expiresAt);
+
+    // 참가자 목록
+    document.getElementById('member-list').innerHTML = memberList.map(([mId, m]) => {
+      const isMe    = mId === userId;
+      const isExcl  = excluded[mId];
+      const badges  = [
+        mId === room.hostId ? '<span class="badge badge-host">방장</span>' : '',
+        isMe                ? '<span class="badge badge-you">나</span>'    : '',
+        isExcl              ? '<span class="badge badge-excl">다음 제외</span>' : '',
+      ].filter(Boolean).join(' ');
+
+      const statusTxt = m.confirmed
+        ? `✅ ${m.menuName} (${(m.menuPrice||0).toLocaleString()}원)`
+        : m.menuName ? `🛒 ${m.menuName} 선택 중...` : '⏳ 메뉴 선택 중...';
+      const statusCls = m.confirmed ? 'confirmed' : '';
+
+      const kickBtn = isHost && !isMe && !room.winner
+        ? `<button class="btn btn-red" onclick="window._kick('${mId}')">강퇴</button>`
+        : '';
+
+      return `
+        <div class="member-row">
+          <div class="member-avatar">${m.nickname[0]}</div>
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+              <span class="member-name">${esc(m.nickname)}</span>${badges}
+            </div>
+            <div class="member-status ${statusCls}">${statusTxt}</div>
+          </div>
+          ${kickBtn}
+        </div>`;
+    }).join('');
+
+    // 내 메뉴 상태
+    const me = members[userId];
+    if (me) {
+      document.getElementById('my-order-text').textContent =
+        me.menuName ? `${me.menuName}  ${(me.menuPrice||0).toLocaleString()}원` : '선택 안 함';
+
+      // 메뉴 그리드 선택 표시
+      document.querySelectorAll('.menu-item').forEach(el => {
+        el.classList.toggle('selected', el.dataset.name === me.menuName);
+        el.classList.toggle('disabled-menu', !!me.confirmed || !!room.winner);
+      });
+
+      // 확정 버튼
+      const confirmBtn = document.getElementById('confirm-btn');
+      confirmBtn.disabled = !me.menuName || !!me.confirmed || !!room.winner;
+      confirmBtn.textContent = me.confirmed ? '✅ 확정 완료' : '✓ 주문 확정';
+    }
+
+    // 전체 주문 목록
+    const total = memberList.reduce((s, [, m]) => s + (m.confirmed ? (m.menuPrice||0) : 0), 0);
+    document.getElementById('total-amount').textContent = total.toLocaleString() + '원';
+    document.getElementById('all-orders').innerHTML = memberList.map(([, m]) => `
+      <div class="order-row ${m.confirmed ? 'confirmed-row' : ''}">
+        <span>${esc(m.nickname)}</span>
+        <span>${m.confirmed ? `${m.menuName} · ${(m.menuPrice||0).toLocaleString()}원` : '-'}</span>
+      </div>`).join('');
+
+    // 뽑기 버튼
+    const drawBtn  = document.getElementById('draw-btn');
+    const drawHint = document.getElementById('draw-hint');
+    const allDone  = memberList.length > 0 && memberList.every(([, m]) => m.confirmed);
+
+    if (room.winner) {
+      drawBtn.disabled    = true;
+      drawBtn.textContent = '🎉 뽑기 완료!';
+      drawHint.textContent = '';
+    } else if (!isHost) {
+      drawBtn.disabled     = true;
+      drawHint.textContent = '방장만 뽑기를 시작할 수 있어요';
+    } else if (!allDone) {
+      drawBtn.disabled     = true;
+      const waiting = memberList.filter(([, m]) => !m.confirmed).length;
+      drawHint.textContent = `아직 ${waiting}명이 주문을 확정하지 않았어요`;
+    } else {
+      drawBtn.disabled     = false;
+      drawHint.textContent = '🎊 모두 확정! 뽑기를 시작해보세요';
+    }
+
+    // 당첨자
+    const winnerSec = document.getElementById('winner-section');
+    if (room.winner) {
+      winnerSec.style.display = 'block';
+      const wm = members[room.winner];
+      document.getElementById('winner-name-big').textContent = wm ? `🏆 ${wm.nickname}` : '당첨자';
+      document.getElementById('winner-sub').textContent      = `오늘 커피는 ${wm?.nickname ?? ''}님이 쏩니다! ☕`;
+      const exclNotice = document.getElementById('excl-notice');
+      if (excluded[room.winner]) {
+        exclNotice.style.display = 'block';
+        exclNotice.textContent   = `🚫 ${wm?.nickname ?? ''}님은 다음 뽑기에서 제외됩니다`;
+      } else {
+        exclNotice.style.display = 'none';
+      }
+    } else {
+      winnerSec.style.display = 'none';
+    }
+  }
+
+  // 타이머
+  function updateTimer(expiresAt) {
+    if (timerInterval) clearInterval(timerInterval);
+    const el = document.getElementById('room-timer-display');
+    function tick() {
+      const rem  = Math.max(0, expiresAt - Date.now());
+      const mins = Math.floor(rem / 60000);
+      const secs = Math.floor((rem % 60000) / 1000);
+      el.textContent  = `⏱ ${mins}:${String(secs).padStart(2,'0')}`;
+      el.className    = 'room-timer ' + (rem < 3 * 60000 ? 'urgent' : ''); // reuse style
+      el.id           = 'room-timer-display'; // keep id
+      if (rem === 0) { clearInterval(timerInterval); alert('방이 만료됐어요!'); doLeaveRoom(false); }
+    }
+    tick();
+    timerInterval = setInterval(tick, 1000);
+  }
+
+  // ════════════════════════════════════════════
+  // 메뉴 그리드
+  // ════════════════════════════════════════════
+  function renderMenuGrid() {
+    document.getElementById('menu-grid').innerHTML = MENU.map(item => `
+      <div class="menu-item" data-name="${item.name}" data-price="${item.price}"
+           onclick="window._selectMenu('${item.name}', ${item.price})">
+        <div class="m-name">${item.name}</div>
+        <div class="m-price">${item.price.toLocaleString()}원</div>
+      </div>`).join('');
+  }
+
+  window._selectMenu = async function(name, price) {
+    if (!currentRoomId) return;
+    await update(ref(db, `rooms/${currentRoomId}/members/${userId}`), {
+      menuName: name, menuPrice: price, confirmed: false
+    });
+  };
+
+  document.getElementById('confirm-btn').addEventListener('click', async () => {
+    if (!currentRoomId) return;
+    await update(ref(db, `rooms/${currentRoomId}/members/${userId}`), { confirmed: true });
+  });
+
+  // ════════════════════════════════════════════
+  // 강퇴
+  // ════════════════════════════════════════════
+  window._kick = async function(memberId) {
+    if (!confirm('이 멤버를 강퇴할까요?')) return;
+    await remove(ref(db, `rooms/${currentRoomId}/members/${memberId}`));
+  };
+
+  // ════════════════════════════════════════════
+  // 뽑기
+  // ════════════════════════════════════════════
+  document.getElementById('draw-btn').addEventListener('click', async () => {
+    if (!currentRoomId || !currentRoomSnap) return;
+    const members  = currentRoomSnap.members      || {};
+    const excluded = currentRoomSnap.excludedUsers || {};
+    const allIds   = Object.keys(members);
+    let eligible   = allIds.filter(id => !excluded[id]);
+
+    if (eligible.length === 0) {
+      // 모두 제외됐으면 초기화 후 전체에서 뽑기
+      alert('모든 멤버가 제외 상태예요! 제외 목록을 초기화하고 전원에서 뽑겠습니다.');
+      eligible = allIds;
+      await set(ref(db, `rooms/${currentRoomId}/excludedUsers`), {});
+    }
+
+    // 뽑기 애니메이션
+    const btn = document.getElementById('draw-btn');
+    btn.disabled    = true;
+    btn.textContent = '🎲 뽑는 중...';
+    await delay(1600);
+
+    const winner   = eligible[Math.floor(Math.random() * eligible.length)];
+    const newExcl  = { ...(currentRoomSnap.excludedUsers || {}), [winner]: true };
+    await update(ref(db, 'rooms/' + currentRoomId), { winner, excludedUsers: newExcl });
+  });
+
+  // ════════════════════════════════════════════
+  // 나가기
+  // ════════════════════════════════════════════
+  document.getElementById('leave-room-btn').addEventListener('click', () => {
+    if (confirm('방에서 나가시겠어요?')) doLeaveRoom(true);
+  });
+
+  async function doLeaveRoom(doRemove) {
+    if (timerInterval) clearInterval(timerInterval);
+    if (unsubRoom) { unsubRoom(); unsubRoom = null; }
+
+    if (doRemove && currentRoomId) {
+      if (currentRoomSnap?.hostId === userId) {
+        // 방장이 나가면 방 삭제
+        await remove(ref(db, 'rooms/' + currentRoomId));
+      } else {
+        await remove(ref(db, `rooms/${currentRoomId}/members/${userId}`));
+      }
+    }
+
+    currentRoomId   = null;
+    currentRoomSnap = null;
+    document.getElementById('winner-section').style.display = 'none';
+    document.getElementById('confirm-btn').textContent      = '✓ 주문 확정';
+    goToRoomList();
+  }
+
+  // ════════════════════════════════════════════
+  // 유틸
+  // ════════════════════════════════════════════
+  function esc(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+  function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+</script>
+</body>
+</html>
