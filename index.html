@@ -63,6 +63,12 @@
       padding: 4px 12px;
       font-size: 0.8rem;
       color: var(--cream-dim);
+      cursor: pointer;
+      transition: all 0.18s;
+    }
+    .app-header .user-chip:hover {
+      border-color: var(--gold);
+      color: var(--gold-lt);
     }
 
     /* ── Container ── */
@@ -436,7 +442,7 @@
 <div class="app-header">
   <span style="font-size:1.4rem;">☕</span>
   <span class="logo-text">CafeWing Roulette</span>
-  <div class="user-chip" id="header-user"></div>
+  <div class="user-chip" id="header-user" onclick="window._changeNickname()" title="클릭해서 닉네임 변경"></div>
 </div>
 
 <!-- ══════════════════════════════════════
@@ -483,7 +489,10 @@
       </div>
       <span id="room-timer-display">⏱ --:--</span>
     </div>
-    <button id="leave-room-btn" class="btn btn-outline" style="font-size:0.8rem; padding:6px 14px;">← 나가기</button>
+    <div style="display:flex; gap:8px;">
+      <button id="leave-room-btn" class="btn btn-outline" style="font-size:0.8rem; padding:6px 14px;">← 나가기</button>
+      <button id="delete-room-btn" class="btn btn-red" style="display:none; font-size:0.8rem; padding:6px 14px;">🗑 방 삭제</button>
+    </div>
   </div>
 
   <!-- 참가자 -->
@@ -750,6 +759,7 @@
     // 헤더
     document.getElementById('room-title').textContent = `☕ ${room.hostNickname}의 카페 타임`;
     document.getElementById('room-meta').textContent  = `방장: ${room.hostNickname}`;
+    document.getElementById('delete-room-btn').style.display = isHost ? 'inline-flex' : 'none';
 
     // 타이머
     updateTimer(room.expiresAt);
@@ -892,6 +902,30 @@
   document.getElementById('confirm-btn').addEventListener('click', async () => {
     if (!currentRoomId) return;
     await update(ref(db, `rooms/${currentRoomId}/members/${userId}`), { confirmed: true });
+  });
+
+  // ════════════════════════════════════════════
+  // 닉네임 변경
+  // ════════════════════════════════════════════
+  window._changeNickname = function() {
+    if (currentRoomId) return alert('방 안에서는 닉네임을 변경할 수 없어요.\n방에서 나간 후 변경해주세요!');
+    const newNick = prompt('새 닉네임을 입력해주세요 (최대 10자):', userNickname);
+    if (!newNick) return;
+    const trimmed = newNick.trim().slice(0, 10);
+    if (!trimmed) return;
+    userNickname = trimmed;
+    localStorage.setItem('cw_nick', userNickname);
+    setHeaderUser(userNickname);
+    alert(`닉네임이 "${userNickname}"으로 변경됐어요!`);
+  };
+
+  // ════════════════════════════════════════════
+  // 방 삭제 (방장 전용)
+  // ════════════════════════════════════════════
+  document.getElementById('delete-room-btn').addEventListener('click', async () => {
+    if (!confirm('방을 삭제하면 모든 참가자가 방에서 나가게 돼요. 삭제할까요?')) return;
+    await remove(ref(db, 'rooms/' + currentRoomId));
+    // doLeaveRoom(false) 는 Firebase 리스너가 방 없어진 걸 감지해서 자동 처리됨
   });
 
   // ════════════════════════════════════════════
