@@ -428,6 +428,8 @@ let aStep  = 0;             // admin add-menu step
 let unsubR = null;          // room listener
 let unsubL = null;          // room list listener
 let unsubM = null;          // menus listener
+let unsubAR = null;         // admin rooms listener
+let admRooms = {};          // cached rooms (admin view)
 let timerT = null;          // timer interval
 
 // ─── View helpers ────────────────────────────
@@ -451,6 +453,7 @@ document.getElementById('adm-btn').addEventListener('click', ()=>{
 document.getElementById('adm-back-btn').addEventListener('click', ()=>{
   if(!confirm('관리자 모드에서 로그아웃할까요?')) return;
   isAdm=false; localStorage.removeItem('cw_adm');
+  if(unsubAR){ unsubAR(); unsubAR=null; }
   document.getElementById('adm-btn').textContent='🔑 관리자';
   document.getElementById('adm-btn').classList.remove('on');
   goRooms();
@@ -856,7 +859,12 @@ document.getElementById('draw-btn').addEventListener('click', async()=>{
 // ─── Admin panel ─────────────────────────────
 function showAdminView(){
   if(unsubL){ unsubL(); unsubL=null; }
-  showV('admin'); renderAdminMenus(); renderAdminRooms();
+  showV('admin'); renderAdminMenus(); startAdminRooms();
+}
+
+// 열린 방 개수 (만료 제외)
+function openRoomCount(){
+  return Object.values(admRooms).filter(r=>Date.now()<=r.expiresAt).length;
 }
 
 function renderAdminMenus(){
@@ -876,36 +884,46 @@ function renderAdminMenus(){
   document.getElementById('adm-menus').innerHTML=h||'<div style="color:var(--dim);font-size:.82rem">메뉴가 없어요</div>';
 }
 
-function renderAdminRooms(){
-  get(ref(db,'rooms')).then(s=>{
-    const data=s.val()||{};
-    const rooms=Object.entries(data).filter(([,r])=>Date.now()<=r.expiresAt);
-    if(!rooms.length){ document.getElementById('adm-rooms').innerHTML='<div style="color:var(--dim);font-size:.82rem">현재 열린 방이 없어요</div>'; return; }
-    document.getElementById('adm-rooms').innerHTML=rooms.map(([rid,r])=>`
-      <div class="ari">
-        <div>
-          <div class="ari-t">☕ ${esc(r.hostNickname)}의 방 · ${r.type==='bet'?'내기':'심부름'}</div>
-          <div class="ari-s">${Object.keys(r.members||{}).length}명 · ${r.locked?'🔒 잠김':'열림'}</div>
-        </div>
-        <button class="btn btn-r btn-sm" onclick="admDel('${rid}')">삭제</button>
-      </div>`).join('');
+function startAdminRooms(){
+  if(unsubAR) unsubAR();
+  unsubAR = onValue(ref(db,'rooms'), s=>{
+    admRooms = s.val()||{};
+    renderAdminRooms();
   });
+}
+
+function renderAdminRooms(){
+  const rooms=Object.entries(admRooms).filter(([,r])=>Date.now()<=r.expiresAt);
+  if(!rooms.length){ document.getElementById('adm-rooms').innerHTML='<div style="color:var(--dim);font-size:.82rem">현재 열린 방이 없어요</div>'; return; }
+  document.getElementById('adm-rooms').innerHTML=rooms.map(([rid,r])=>`
+    <div class="ari">
+      <div>
+        <div class="ari-t">☕ ${esc(r.hostNickname)}의 방 · ${r.type==='bet'?'내기':'심부름'}</div>
+        <div class="ari-s">${Object.keys(r.members||{}).length}명 · ${r.locked?'🔒 잠김':'열림'}</div>
+      </div>
+      <button class="btn btn-r btn-sm" onclick="admDel('${rid}')">삭제</button>
+    </div>`).join('');
 }
 
 window.admDel=async rid=>{
   if(!confirm('이 방을 삭제할까요? 모든 참가자가 방에서 나가게 됩니다.')) return;
   await remove(ref(db,'rooms/'+rid));
-  renderAdminRooms();
 };
 
 window.admDelMenu=async(mid,name)=>{
-  if(!confirm(`"${name}" 메뉴를 삭제할까요?`)) return;
+  const n=openRoomCount();
+  const msg = n>0
+    ? `⚠️ 현재 ${n}개의 방이 열려있어요.\n메뉴를 수정하면 방에 참여 중인 사용자에게도 영향을 줄 수 있어요.\n\n"${name}" 메뉴를 삭제할까요?`
+    : `"${name}" 메뉴를 삭제할까요?`;
+  if(!confirm(msg)) return;
   await remove(ref(db,'menus/'+mid));
   renderAdminMenus();
 };
 
 // ─── Admin add menu ───────────────────────────
 document.getElementById('adm-add-btn').addEventListener('click', ()=>{
+  const n=openRoomCount();
+  if(n>0 && !confirm(`⚠️ 현재 ${n}개의 방이 열려있어요.\n메뉴를 수정하면 방에 참여 중인 사용자에게도 영향을 줄 수 있어요.\n\n그래도 메뉴를 추가할까요?`)) return;
   aDraft={}; aStep=0; renderStep(); openM('m-amenu');
 });
 
