@@ -91,7 +91,7 @@
     #rt{font-size:.78rem;font-weight:700;color:var(--gold);}
     #rt.urg{color:var(--red);}
     .rhead-acts{display:flex;gap:7px;flex-wrap:wrap;}
-    .lock-notice{background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.3);border-radius:10px;padding:9px 13px;font-size:.8rem;color:var(--red);text-align:center;margin-bottom:11px;display:none;}
+    .lock-notice{display:none;}
 
     /* Members */
     .mr{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--sf2);}
@@ -268,7 +268,6 @@
       <button id="del-btn"   class="btn btn-r btn-sm" style="display:none">🗑 방 삭제</button>
     </div>
   </div>
-  <div class="lock-notice" id="lock-ntc">🔒 추첨이 완료되어 새 참가자는 입장할 수 없습니다</div>
 
   <div class="card">
     <div class="sec">참가자</div>
@@ -305,7 +304,6 @@
       <div class="wico">🎉</div>
       <div class="wname" id="wname"></div>
       <div class="wsub" id="wsub"></div>
-      <div class="excl" id="excl"></div>
     </div>
   </div>
 
@@ -576,7 +574,7 @@ function goRooms(){
 function renderRooms(data){
   const el=document.getElementById('rlist');
   const list=Object.entries(data)
-    .filter(([,r])=>Date.now()<=r.expiresAt && !r.locked)
+    .filter(([,r])=>Date.now()<=r.expiresAt)
     .sort((a,b)=>b[1].createdAt-a[1].createdAt);
   if(!list.length){
     el.innerHTML='<div class="empty"><div class="empty-ico">🪑</div><p>열린 방이 없어요<br><span style="opacity:.6">방을 만들어서 팀원을 초대해보세요!</span></p></div>';
@@ -610,7 +608,7 @@ window.mkRoom = async type=>{
   await set(ref(db,'rooms/'+rid),{
     type,hostId:uid,hostNickname:nick,
     createdAt:now,expiresAt:now+ROOM_TTL,
-    winner:null,locked:false,excludedUsers:{}
+    winner:null
   });
   await set(ref(db,`rooms/${rid}/members/${uid}`),{nickname:nick,emoji:pickEmoji(),cart:null,confirmed:false,orderTotal:0,joinedAt:now});
   enterRoom(rid);
@@ -621,7 +619,6 @@ window.joinRoom = async rid=>{
   if(!s.exists()) return alert('방이 이미 사라졌어요!');
   const r=s.val();
   if(Date.now()>r.expiresAt){ await remove(ref(db,'rooms/'+rid)); return alert('만료된 방이에요!'); }
-  if(r.locked) return alert('이미 추첨이 완료된 방이에요!');
   if(r.banned && r.banned[uid]) return alert('이 방에서 강퇴되어 다시 입장할 수 없어요.');
   const ex=await get(ref(db,`rooms/${rid}/members/${uid}`));
   if(!ex.exists()) await set(ref(db,`rooms/${rid}/members/${uid}`),{nickname:nick,emoji:pickEmoji(),cart:null,confirmed:false,orderTotal:0,joinedAt:Date.now()});
@@ -675,12 +672,11 @@ async function sendChat(){
 
 function renderRoom(r){
   const isHost=r.hostId===uid, isBet=r.type==='bet';
-  const members=r.members||{}, excl=r.excludedUsers||{};
+  const members=r.members||{};
   const mlist=Object.entries(members).sort((a,b)=>a[1].joinedAt-b[1].joinedAt);
 
   document.getElementById('r-title').textContent=`☕ ${r.hostNickname}의 카페 타임`;
   document.getElementById('r-meta').textContent=`방장: ${r.hostNickname} · ${isBet?'🎲 내기만 하는 방':'☕ 심부름까지 하는 방'}`;
-  document.getElementById('lock-ntc').style.display=r.locked?'block':'none';
   document.getElementById('vmenu-btn').style.display=isBet?'inline-flex':'none';
   document.getElementById('del-btn').style.display=(isHost||isAdm)?'inline-flex':'none';
 
@@ -688,18 +684,17 @@ function renderRoom(r){
 
   // Members
   document.getElementById('mlist').innerHTML=mlist.map(([mid,m])=>{
-    const isMe=mid===uid, isExcl=excl[mid];
+    const isMe=mid===uid;
     const badges=[
       mid===r.hostId?'<span class="badge bh">방장</span>':'',
       isMe?'<span class="badge by">나</span>':'',
-      isExcl?'<span class="badge be">다음 제외</span>':'',
     ].filter(Boolean).join(' ');
     let st,sc='';
     if(isBet){ st='☕ 참가 중'; }
     else if(m.confirmed){ st=`✅ 확정 (${(m.orderTotal||0).toLocaleString()}원)`; sc='ok'; }
     else if(m.cart&&Object.keys(m.cart).length){ st=`🛒 담는 중... (${(m.orderTotal||0).toLocaleString()}원)`; }
     else { st='⏳ 메뉴 선택 중...'; }
-    const kick=(isHost&&!isMe&&!r.winner)?`<button class="btn btn-r btn-sm" onclick="kick('${mid}')">강퇴</button>`:'';
+    const kick=(isHost&&!isMe)?`<button class="btn btn-r btn-sm" onclick="kick('${mid}')">강퇴</button>`:'';
     return `<div class="mr">
       <div class="av">${m.emoji||m.nickname[0]}</div>
       <div style="flex:1;min-width:0">
@@ -714,17 +709,17 @@ function renderRoom(r){
   if(!isBet){ mc.style.display='block'; renderMenuSec(r); }
   else { mc.style.display='none'; }
 
-  renderDraw(r,mlist,isHost,isBet,excl);
-  renderWinner(r,members,excl);
+  renderDraw(r,mlist,isHost,isBet);
+  renderWinner(r,members);
 }
 
 function renderMenuSec(r){
   const me=(r.members||{})[uid]; if(!me) return;
-  const cfm=me.confirmed, locked=r.locked;
+  const cfm=me.confirmed;
 
   // Category tabs
   const ctabs=document.getElementById('ctabs');
-  if(!cfm&&!locked){
+  if(!cfm){
     ctabs.innerHTML=CATS.map(c=>`<button class="cat-tab ${selCat===c?'on':''}" onclick="setCat('${c}')">${c}</button>`).join('');
     // Menu grid
     const catMs=Object.entries(menus).filter(([,m])=>m.cat===selCat).sort((a,b)=>(a[1].ord||0)-(b[1].ord||0));
@@ -743,7 +738,7 @@ function renderMenuSec(r){
   } else {
     clist.innerHTML=entries.map(([cid,it])=>{
       const ops=fmtOpts(it);
-      const del=(!cfm&&!locked)?`<button class="ci-del" onclick="delCart('${cid}')">삭제</button>`:'';
+      const del=(!cfm)?`<button class="ci-del" onclick="delCart('${cid}')">삭제</button>`:'';
       return `<div class="ci">
         <div style="flex:1;min-width:0">
           <div class="ci-n">${esc(it.menuName)} × ${it.quantity}</div>
@@ -755,7 +750,7 @@ function renderMenuSec(r){
   }
   document.getElementById('cart-tot').textContent=(me.orderTotal||0).toLocaleString()+'원';
   const cb=document.getElementById('cfm-btn');
-  cb.disabled=cfm||locked||!entries.length;
+  cb.disabled=cfm||!entries.length;
   cb.textContent=cfm?'✅ 확정 완료':'✓ 주문 확정';
 }
 
@@ -771,7 +766,7 @@ function fmtOpts(it){
 
 window.setCat=c=>{ selCat=c; if(curR) renderMenuSec(curR); };
 
-function renderDraw(r,mlist,isHost,isBet,excl){
+function renderDraw(r,mlist,isHost,isBet){
   const drawBtn=document.getElementById('draw-btn'), hint=document.getElementById('dhint');
   const allOrd=document.getElementById('all-ord'), grand=document.getElementById('grand-row');
   let tot=0;
@@ -783,26 +778,27 @@ function renderDraw(r,mlist,isHost,isBet,excl){
   if(isBet){ grand.style.display='none'; }
   else { grand.style.display='flex'; document.getElementById('grand-amt').textContent=tot.toLocaleString()+'원'; }
 
-  if(r.winner){ drawBtn.disabled=true; drawBtn.textContent='🎉 뽑기 완료!'; hint.textContent=''; }
-  else if(!isHost){ drawBtn.disabled=true; hint.textContent='방장만 뽑기를 시작할 수 있어요'; }
-  else if(isBet){ drawBtn.disabled=false; hint.textContent='참가자가 모이면 언제든 뽑기를 시작하세요!'; }
+  if(r.winner){
+    if(isHost){ drawBtn.disabled=false; drawBtn.textContent='🔄 다시 뽑기'; hint.textContent='다시 뽑으면 전원에서 새로 추첨돼요'; }
+    else { drawBtn.disabled=true; drawBtn.textContent='🎉 뽑기 완료'; hint.textContent='방장이 다시 뽑을 수 있어요'; }
+  }
+  else if(!isHost){ drawBtn.disabled=true; drawBtn.textContent='🎲 뽑기 시작!'; hint.textContent='방장만 뽑기를 시작할 수 있어요'; }
+  else if(isBet){ drawBtn.disabled=false; drawBtn.textContent='🎲 뽑기 시작!'; hint.textContent='참가자가 모이면 언제든 뽑기를 시작하세요!'; }
   else {
+    drawBtn.textContent='🎲 뽑기 시작!';
     const done=mlist.length>0&&mlist.every(([,m])=>m.confirmed);
     if(done){ drawBtn.disabled=false; hint.textContent='🎊 모두 확정! 뽑기를 시작해보세요'; }
     else { drawBtn.disabled=true; hint.textContent=`아직 ${mlist.filter(([,m])=>!m.confirmed).length}명이 확정하지 않았어요`; }
   }
 }
 
-function renderWinner(r,members,excl){
+function renderWinner(r,members){
   const ws=document.getElementById('win-sec');
   if(!r.winner){ ws.style.display='none'; return; }
   ws.style.display='block';
   const wm=members[r.winner];
   document.getElementById('wname').textContent=wm?`🏆 ${wm.emoji||''} ${wm.nickname}`:'당첨자';
   document.getElementById('wsub').textContent=`오늘 커피는 ${wm?.emoji??''} ${wm?.nickname??''}님이 쏩니다! ☕`;
-  const ex=document.getElementById('excl');
-  if(excl[r.winner]){ ex.style.display='block'; ex.textContent=`🚫 ${wm?.nickname??''}님은 다음 뽑기에서 제외됩니다`; }
-  else { ex.style.display='none'; }
 }
 
 function startTimer(exp){
@@ -957,15 +953,13 @@ async function leaveRoom(doRm){
 // ─── Draw ────────────────────────────────────
 document.getElementById('draw-btn').addEventListener('click', async()=>{
   if(!curRid||!curR) return;
-  const ms=curR.members||{}, ex=curR.excludedUsers||{};
-  const all=Object.keys(ms);
-  let elig=all.filter(id=>!ex[id]);
-  if(!elig.length){ alert('모든 멤버가 제외 상태예요! 초기화 후 전원에서 뽑겠습니다.'); elig=all; await set(ref(db,`rooms/${curRid}/excludedUsers`),{}); }
+  const all=Object.keys(curR.members||{});
+  if(!all.length) return;
   const btn=document.getElementById('draw-btn');
   btn.disabled=true; btn.textContent='🎲 뽑는 중...';
   await new Promise(r=>setTimeout(r,1600));
-  const w=elig[Math.floor(Math.random()*elig.length)];
-  await update(ref(db,'rooms/'+curRid),{winner:w, excludedUsers:{...(curR.excludedUsers||{}),[w]:true}, locked:true});
+  const w=all[Math.floor(Math.random()*all.length)];
+  await update(ref(db,'rooms/'+curRid),{winner:w});
 });
 
 // ─── Admin panel ─────────────────────────────
@@ -1011,7 +1005,7 @@ function renderAdminRooms(){
     <div class="ari">
       <div>
         <div class="ari-t">☕ ${esc(r.hostNickname)}의 방 · ${r.type==='bet'?'내기':'심부름'}</div>
-        <div class="ari-s">${Object.keys(r.members||{}).length}명 · ${r.locked?'🔒 잠김':'열림'}</div>
+        <div class="ari-s">${Object.keys(r.members||{}).length}명${r.winner?' · 🏆 추첨됨':''}</div>
       </div>
       <button class="btn btn-r btn-sm" onclick="admDel('${rid}')">삭제</button>
     </div>`).join('');
