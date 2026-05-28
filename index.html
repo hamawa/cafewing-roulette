@@ -366,6 +366,18 @@
   </div>
 </div>
 
+<!-- ═══ MODAL: 관리자 비밀번호 ═══ -->
+<div id="m-pw" class="mover">
+  <div class="mbox" style="max-width:340px">
+    <div class="mtitle">🔑 관리자 로그인</div>
+    <input id="pw-inp" class="inp" type="password" placeholder="비밀번호 입력" maxlength="20" style="margin-bottom:12px">
+    <div style="display:flex;gap:7px">
+      <button class="btn btn-o" style="flex:1" onclick="closeM('m-pw')">취소</button>
+      <button class="btn btn-g" style="flex:1" onclick="submitPw()">확인</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp }    from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
 import { getAuth, signInAnonymously }
@@ -453,15 +465,21 @@ function setHdr(n){ document.getElementById('huser').textContent = n?'👤 '+n:'
 // ─── Admin button ────────────────────────────
 document.getElementById('adm-btn').addEventListener('click', ()=>{
   if(isAdm){ showAdminView(); return; }
-  const pw = prompt('관리자 비밀번호:');
-  if(pw===null) return;
+  document.getElementById('pw-inp').value='';
+  openM('m-pw');
+  setTimeout(()=>document.getElementById('pw-inp').focus(),100);
+});
+window.submitPw=()=>{
+  const pw=document.getElementById('pw-inp').value;
+  closeM('m-pw');
   if(pw===ADMIN_PW){
     isAdm=true; localStorage.setItem('cw_adm','1');
     document.getElementById('adm-btn').textContent='⚙️ 관리자';
     document.getElementById('adm-btn').classList.add('on');
     showAdminView();
   } else { alert('비밀번호가 틀렸어요!'); }
-});
+};
+document.getElementById('pw-inp').addEventListener('keydown', e=>{ if(e.key==='Enter') window.submitPw(); });
 document.getElementById('adm-back-btn').addEventListener('click', ()=>{
   if(!confirm('관리자 모드에서 로그아웃할까요?')) return;
   isAdm=false; localStorage.removeItem('cw_adm');
