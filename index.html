@@ -591,6 +591,7 @@ window.joinRoom = async rid=>{
   const r=s.val();
   if(Date.now()>r.expiresAt){ await remove(ref(db,'rooms/'+rid)); return alert('만료된 방이에요!'); }
   if(r.locked) return alert('이미 추첨이 완료된 방이에요!');
+  if(r.banned && r.banned[uid]) return alert('이 방에서 강퇴되어 다시 입장할 수 없어요.');
   const ex=await get(ref(db,`rooms/${rid}/members/${uid}`));
   if(!ex.exists()) await set(ref(db,`rooms/${rid}/members/${uid}`),{nickname:nick,cart:null,confirmed:false,orderTotal:0,joinedAt:Date.now()});
   enterRoom(rid);
@@ -861,6 +862,7 @@ document.getElementById('vmenu-btn').addEventListener('click', ()=>{
 window.kick=async mid=>{
   if(!confirm('이 멤버를 강퇴할까요?')) return;
   await remove(ref(db,`rooms/${curRid}/members/${mid}`));
+  await set(ref(db,`rooms/${curRid}/banned/${mid}`),true);
 };
 
 document.getElementById('del-btn').addEventListener('click', async()=>{
