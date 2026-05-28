@@ -959,7 +959,12 @@ document.getElementById('draw-btn').addEventListener('click', async()=>{
   btn.disabled=true; btn.textContent='🎲 뽑는 중...';
   await new Promise(r=>setTimeout(r,1600));
   const w=all[Math.floor(Math.random()*all.length)];
-  await update(ref(db,'rooms/'+curRid),{winner:w});
+  try {
+    await update(ref(db,'rooms/'+curRid),{winner:w, drawAt:Date.now()});
+  } catch(e) {
+    btn.disabled=false; btn.textContent='🎲 다시 시도';
+    alert('뽑기에 실패했어요. 다시 시도해주세요.');
+  }
 });
 
 // ─── Admin panel ─────────────────────────────
