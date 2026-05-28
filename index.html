@@ -160,6 +160,18 @@
     @keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
     .wname{font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--glt);margin-bottom:5px;}
     .wsub{font-size:.83rem;color:var(--dim);}
+
+    /* Chat */
+    .chat-msgs{max-height:240px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:11px;padding-right:4px;}
+    .chat-empty{text-align:center;color:var(--dim);font-size:.8rem;padding:20px 0;}
+    .cmsg{display:flex;flex-direction:column;max-width:78%;}
+    .cmsg.mine{align-self:flex-end;align-items:flex-end;}
+    .cmsg-meta{font-size:.68rem;color:var(--dim);margin-bottom:2px;padding:0 2px;}
+    .cmsg-bubble{background:var(--sf2);border:1px solid var(--bd);border-radius:13px;padding:7px 11px;font-size:.85rem;line-height:1.4;word-break:break-word;}
+    .cmsg.mine .cmsg-bubble{background:rgba(201,150,58,.15);border-color:var(--gold);color:var(--cream);}
+    .cmsg-time{font-size:.62rem;color:var(--dim);opacity:.7;margin-top:2px;padding:0 2px;}
+    .chat-input{display:flex;gap:7px;}
+    .chat-input .inp{flex:1;}
     .excl{margin-top:13px;font-size:.78rem;color:var(--pur);background:var(--purbg);border:1px solid rgba(160,124,197,.3);padding:9px;border-radius:9px;display:none;}
 
     /* Modal */
@@ -294,6 +306,15 @@
       <div class="wname" id="wname"></div>
       <div class="wsub" id="wsub"></div>
       <div class="excl" id="excl"></div>
+    </div>
+  </div>
+
+  <div class="card" id="chat-card">
+    <div class="sec">💬 채팅</div>
+    <div id="chat-msgs" class="chat-msgs"></div>
+    <div class="chat-input">
+      <input id="chat-inp" class="inp" placeholder="메시지 입력..." maxlength="200">
+      <button id="chat-send" class="btn btn-g">전송</button>
     </div>
   </div>
 </div>
@@ -462,6 +483,7 @@ let unsubR = null;          // room listener
 let unsubL = null;          // room list listener
 let unsubM = null;          // menus listener
 let unsubAR = null;         // admin rooms listener
+let unsubC = null;          // chat listener
 let admRooms = {};          // cached rooms (admin view)
 let timerT = null;          // timer interval
 
@@ -617,6 +639,38 @@ function enterRoom(rid){
     if(val.members && !val.members[uid]){ alert('방에서 강퇴되었어요.'); leaveRoom(false); return; }
     curR=val; renderRoom(curR);
   });
+  if(unsubC) unsubC();
+  unsubC=onValue(ref(db,`rooms/${rid}/chat`), s=>renderChat(s.val()||{}));
+}
+
+function renderChat(msgs){
+  const box=document.getElementById('chat-msgs');
+  const list=Object.values(msgs).sort((a,b)=>a.ts-b.ts);
+  if(!list.length){ box.innerHTML='<div class="chat-empty">아직 메시지가 없어요. 첫 메시지를 남겨보세요! 💬</div>'; return; }
+  const nearBottom = box.scrollHeight-box.scrollTop-box.clientHeight < 60;
+  box.innerHTML=list.map(m=>{
+    const mine=m.uid===uid;
+    const t=new Date(m.ts);
+    const hh=String(t.getHours()).padStart(2,'0'), mm=String(t.getMinutes()).padStart(2,'0');
+    return `<div class="cmsg ${mine?'mine':''}">
+      <div class="cmsg-meta">${m.emoji||''} ${esc(m.nick)}</div>
+      <div class="cmsg-bubble">${esc(m.text)}</div>
+      <div class="cmsg-time">${hh}:${mm}</div>
+    </div>`;
+  }).join('');
+  if(nearBottom) box.scrollTop=box.scrollHeight;
+}
+
+async function sendChat(){
+  const inp=document.getElementById('chat-inp');
+  const text=inp.value.trim();
+  if(!text||!curRid) return;
+  const me=(curR?.members||{})[uid];
+  await push(ref(db,`rooms/${curRid}/chat`),{
+    uid, nick, emoji:me?.emoji||'', text, ts:Date.now()
+  });
+  inp.value='';
+  inp.focus();
 }
 
 function renderRoom(r){
@@ -883,14 +937,19 @@ document.getElementById('leave-btn').addEventListener('click', ()=>{
   if(confirm('방에서 나가시겠어요?')) leaveRoom(true);
 });
 
+document.getElementById('chat-send').addEventListener('click', sendChat);
+document.getElementById('chat-inp').addEventListener('keydown', e=>{ if(e.key==='Enter') sendChat(); });
+
 async function leaveRoom(doRm){
   if(timerT) clearInterval(timerT);
   if(unsubR){ unsubR(); unsubR=null; }
+  if(unsubC){ unsubC(); unsubC=null; }
   if(doRm&&curRid){
     if(curR?.hostId===uid) await remove(ref(db,'rooms/'+curRid));
     else await remove(ref(db,`rooms/${curRid}/members/${uid}`));
   }
   curRid=null; curR=null; selCat=CATS[0];
+  document.getElementById('chat-msgs').innerHTML='';
   document.getElementById('win-sec').style.display='none';
   goRooms();
 }
