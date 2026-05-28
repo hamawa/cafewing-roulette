@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>☕ CafeWing Roulette</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1A1208">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CafeWing">
+  <link rel="apple-touch-icon" href="/icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -160,6 +166,9 @@
     .mover{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:200;display:none;align-items:center;justify-content:center;padding:14px;}
     .mover.open{display:flex;}
     .mbox{background:var(--sf);border:1px solid var(--bd);border-radius:19px;padding:20px;width:100%;max-width:430px;max-height:88vh;overflow-y:auto;box-shadow:var(--sh);}
+    .mbox-scroll{overflow:hidden;display:flex;flex-direction:column;}
+    .mbox-scroll .mscroll{flex:1;overflow-y:auto;min-height:0;}
+    .mbox-scroll .mfoot{flex-shrink:0;padding-top:13px;border-top:1px solid var(--bd);margin-top:10px;}
     .mtitle{font-family:'Playfair Display',serif;font-size:1.15rem;color:var(--glt);margin-bottom:14px;}
 
     /* Room type cards */
@@ -323,10 +332,10 @@
 
 <!-- ═══ MODAL: 메뉴보기 ═══ -->
 <div id="m-menu" class="mover">
-  <div class="mbox">
+  <div class="mbox mbox-scroll">
     <div class="mtitle">☕ Café Wing 메뉴판</div>
-    <div id="menu-popup"></div>
-    <button class="btn btn-o btn-w" style="margin-top:13px" onclick="closeM('m-menu')">닫기</button>
+    <div class="mscroll" id="menu-popup"></div>
+    <div class="mfoot"><button class="btn btn-o btn-w" onclick="closeM('m-menu')">닫기</button></div>
   </div>
 </div>
 
@@ -1018,6 +1027,9 @@ window.aStep=async dir=>{
 
 // ─── Utils ───────────────────────────────────
 function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ─── PWA Service Worker ─────────────────────
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
 
 init();
 </script>
