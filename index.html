@@ -585,7 +585,9 @@ function enterRoom(rid){
   if(unsubR) unsubR();
   unsubR=onValue(ref(db,'rooms/'+rid), s=>{
     if(!s.exists()){ alert('방이 삭제됐어요.'); leaveRoom(false); return; }
-    curR=s.val(); renderRoom(curR);
+    const val=s.val();
+    if(val.members && !val.members[uid]){ alert('방에서 강퇴되었어요.'); leaveRoom(false); return; }
+    curR=val; renderRoom(curR);
   });
 }
 
