@@ -359,6 +359,8 @@
 
 <script type="module">
 import { initializeApp }    from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { getAuth, signInAnonymously }
+  from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 import { getDatabase, ref, set, get, push, onValue, update, remove, off }
   from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 
@@ -372,7 +374,9 @@ const FB = {
   messagingSenderId:"233510817183",
   appId:"1:233510817183:web:443fa293e57a83e94e41aa"
 };
-const db = getDatabase(initializeApp(FB));
+const app = initializeApp(FB);
+const db = getDatabase(app);
+const auth = getAuth(app);
 
 // ─── Initial menu seed ───────────────────────
 const SEED = [
@@ -414,8 +418,7 @@ const ROOM_TTL = 15*60*1000;
 const ADMIN_PW = 'twroot';
 
 // ─── State ──────────────────────────────────
-let uid = localStorage.getItem('cw_uid');
-if (!uid){ uid='u_'+Math.random().toString(36).slice(2,8)+Date.now().toString(36); localStorage.setItem('cw_uid',uid); }
+let uid = null;             // set after anonymous auth
 let nick   = localStorage.getItem('cw_nick');
 let isAdm  = localStorage.getItem('cw_adm')==='1';
 let menus  = {};            // { id: menuDoc }
@@ -461,6 +464,16 @@ document.getElementById('adm-back-btn').addEventListener('click', ()=>{
 
 // ─── Init ────────────────────────────────────
 async function init(){
+  // Anonymous auth (Firebase가 UID 관리, 브라우저별 자동 유지)
+  try {
+    const cred = await signInAnonymously(auth);
+    uid = cred.user.uid;
+  } catch(e){
+    alert('인증 초기화에 실패했어요. 페이지를 새로고침해주세요.');
+    console.error('Auth error:', e);
+    return;
+  }
+
   // Seed menus if empty
   const snap = await get(ref(db,'menus'));
   if(!snap.exists()){
