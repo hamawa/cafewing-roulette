@@ -96,7 +96,7 @@
     /* Members */
     .mr{display:flex;align-items:flex-start;gap:9px;padding:9px 0;border-bottom:1px solid var(--sf2);}
     .mr:last-child{border-bottom:none;}
-    .av{width:35px;height:35px;border-radius:50%;background:linear-gradient(135deg,var(--gold),#7A5A20);display:flex;align-items:center;justify-content:center;font-weight:900;color:#1A1208;flex-shrink:0;}
+    .av{width:36px;height:36px;border-radius:50%;background:var(--sf2);border:1px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
     .mn{font-weight:700;font-size:.86rem;}
     .ms{font-size:.73rem;color:var(--dim);margin-top:2px;}
     .ms.ok{color:var(--grn);}
@@ -437,6 +437,15 @@ const SEED = [
 const CATS = ['COFFEE','NON COFFEE','TEA','DESSERT','SEASON'];
 const ROOM_TTL = 15*60*1000;
 const ADMIN_PW = 'twroot';
+const EMOJIS = [
+  '🐱','🐶','🐰','🐻','🐼','🦊','🐨','🐯','🦁','🐮','🐷','🐸','🐵',
+  '🐔','🐧','🐤','🦄','🐝','🐙','🐳','🐬','🦋','🐢','🐹','🐻‍❄️',
+  '🦒','🦔','🐿️','🦜','🦩','🐈‍⬛','🦝','🐲',
+  '🍰','🧁','🍩','🍪','🍫','🎂','🍭','🍓','🍑','🍒','🥑',
+  '🌸','🌻','🌺','🍀','🌈','⭐','🌙','☘️','🔥','💎',
+  '🎈','🎀','🎨','🎯','🎲','🎵','🧸','🪄','🎪','🏆',
+];
+function pickEmoji(){ return EMOJIS[Math.floor(Math.random()*EMOJIS.length)]; }
 
 // ─── State ──────────────────────────────────
 let uid = null;             // set after anonymous auth
@@ -581,7 +590,7 @@ window.mkRoom = async type=>{
     createdAt:now,expiresAt:now+ROOM_TTL,
     winner:null,locked:false,excludedUsers:{}
   });
-  await set(ref(db,`rooms/${rid}/members/${uid}`),{nickname:nick,cart:null,confirmed:false,orderTotal:0,joinedAt:now});
+  await set(ref(db,`rooms/${rid}/members/${uid}`),{nickname:nick,emoji:pickEmoji(),cart:null,confirmed:false,orderTotal:0,joinedAt:now});
   enterRoom(rid);
 };
 
@@ -593,7 +602,7 @@ window.joinRoom = async rid=>{
   if(r.locked) return alert('이미 추첨이 완료된 방이에요!');
   if(r.banned && r.banned[uid]) return alert('이 방에서 강퇴되어 다시 입장할 수 없어요.');
   const ex=await get(ref(db,`rooms/${rid}/members/${uid}`));
-  if(!ex.exists()) await set(ref(db,`rooms/${rid}/members/${uid}`),{nickname:nick,cart:null,confirmed:false,orderTotal:0,joinedAt:Date.now()});
+  if(!ex.exists()) await set(ref(db,`rooms/${rid}/members/${uid}`),{nickname:nick,emoji:pickEmoji(),cart:null,confirmed:false,orderTotal:0,joinedAt:Date.now()});
   enterRoom(rid);
 };
 
@@ -638,7 +647,7 @@ function renderRoom(r){
     else { st='⏳ 메뉴 선택 중...'; }
     const kick=(isHost&&!isMe&&!r.winner)?`<button class="btn btn-r btn-sm" onclick="kick('${mid}')">강퇴</button>`:'';
     return `<div class="mr">
-      <div class="av">${m.nickname[0]}</div>
+      <div class="av">${m.emoji||m.nickname[0]}</div>
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap"><span class="mn">${esc(m.nickname)}</span>${badges}</div>
         <div class="ms ${sc}">${st}</div>
@@ -735,8 +744,8 @@ function renderWinner(r,members,excl){
   if(!r.winner){ ws.style.display='none'; return; }
   ws.style.display='block';
   const wm=members[r.winner];
-  document.getElementById('wname').textContent=wm?`🏆 ${wm.nickname}`:'당첨자';
-  document.getElementById('wsub').textContent=`오늘 커피는 ${wm?.nickname??''}님이 쏩니다! ☕`;
+  document.getElementById('wname').textContent=wm?`🏆 ${wm.emoji||''} ${wm.nickname}`:'당첨자';
+  document.getElementById('wsub').textContent=`오늘 커피는 ${wm?.emoji??''} ${wm?.nickname??''}님이 쏩니다! ☕`;
   const ex=document.getElementById('excl');
   if(excl[r.winner]){ ex.style.display='block'; ex.textContent=`🚫 ${wm?.nickname??''}님은 다음 뽑기에서 제외됩니다`; }
   else { ex.style.display='none'; }
